@@ -1,35 +1,25 @@
-var myMap;
-var canvas;
+//Declare variables
+var myMap, canvas, selDiv, selText, sel, religionLat, religionLon, data, selIndex, myLoc, myLat, myLon;
 var mappa = new Mappa(
   "MapboxGL",
-  "pk.eyJ1IjoiZG9rc2F2cGMiLCJhIjoiY2sybTUxeXJnMGQycjNqbjVrYjE5dmg3YyJ9.n7CmQCAd4zSI0VxLgEb4DA"
+  "pk.eyJ1Ijoic3lsYXRoYXMiLCJhIjoiY2szNzF1ZTR5MDc5MzNtbnM0dmwzNzdyMCJ9.EN7o0z5fjNZqb_aQFTe8vg"
 );
 
-//declaring the elements for the Religion selection (a container div, a title and a selection element)
-var selDiv;
-var selText;
-var sel;
-//declaring the variables for latitude and longitude of the selected Religion
-var religionLat;
-var religionLon;
-//declaring the variable for the data from the json file
-var data;
-//declaring the variable for the index number of the selected religion
-var selIndex;
-//declaring the starting options for the map using my custom mapbox style
+//Starting options for Mapbox
 var options = {
-  lat: 0,
-  lng: 0,
-  zoom: 2,
+  lat: 42.504154,
+  lng: 12.646361,
+  zoom: 4,
   style: 'mapbox://styles/mapbox/traffic-night-v2'
 };
-//preloading the json with the religions and explanation
+
+//Preloading the json with the religions and explanation and my location
 function preload() {
+  myLoc = getCurrentPosition();
   data = loadJSON("./assets/religion.json");
 }
 
 function setup() {
-  //creating the canvas
   canvas = createCanvas(windowWidth, windowHeight);
   ellipseMode(CENTER);
     
@@ -37,12 +27,13 @@ function setup() {
   myMap = mappa.tileMap(options);
   myMap.overlay(canvas);
     
-  //creating and styling the html elements for the country selection (a container div, a title and the selection input)
+  //Creating and styling the Div and Select for the religion selection
   selDiv = createDiv();
   selDiv.position(20, 40);
-  selDiv.style("z-index", "999");
+  selDiv.style("z-index", "2");
   selDiv.style("background-color", "green");
   selDiv.style("padding", "20px");
+  selDiv.style("border-radius", "10%");
   selText = createElement("h1", "Select a Religion");
   selText.style("color", "white");
   selText.parent(selDiv);
@@ -66,14 +57,25 @@ function draw() {
   religionLat = data.religion[selIndex].ReligionLatitude;
   religionLon = data.religion[selIndex].ReligionLongitude;
     
-  //mapping lon and lat of Holy Cities
-  var religion = myMap.latLngToPixel(religionLat, religionLon);
+  //latutude and longitude of my Position
+  myLat = myLoc.latitude;
+  myLon = myLoc.longitude;
     
-  //Create ellipses around Holy Cities
+  //Transforming positions into pixels 
+  var religion = myMap.latLngToPixel(religionLat, religionLon);
+  var io = myMap.latLngToPixel(myLat, myLon);
+    
+  //Calculate distance in km from me to Holy City
+  var distance = Math.round(
+    calcGeoDistance(myLat, myLon, religionLat, religionLon, "km")
+  );
+    
+  //Create ellipses around Holy Cities and me
   push();
   noStroke();
   fill("Lime");
   ellipse(religion.x, religion.y, 10);
+  ellipse(io.x, io.y, 10);
   pop();
   push();
   textAlign(CENTER);
@@ -82,6 +84,19 @@ function draw() {
   textStyle(BOLD);
   text(data.religion[selIndex].ReligionName, religion.x, religion.y - 10);
   pop();
+    
+  //Create line between me and holy city
+  push();
+  stroke("Lime");
+  line(io.x, io.y, religion.x, religion.y);
+  pop();
+    
+  //Text on me and distance in km
+  fill("Lime");
+  textSize(20);
+  text("You", io.x-20, io.y - 10);
+  textSize(10);
+  text(distance + " km", (io.x + religion.x) / 2, (io.y + religion.y) / 2 - 10);
     
   //Informations about the Religions
   textAlign(LEFT);
@@ -94,14 +109,11 @@ function draw() {
   //Holy City
   noStroke();
   fill("White");
-  textSize(20);
-  text("Holy City:", 40, 240);
   textSize(30);
-  text(data.religion[selIndex].HolyCity, 130, 240);
+  text("Holy City:" + data.religion[selIndex].HolyCity, 40, 240);
 
   //Text
-  fill("rgba(255,255,255,0.95)");
-  textFont("Alegreya");
+  fill("White");
   textSize(16);
   textLeading(21);
   text(data.religion[selIndex].ReligionStory, 40, 260, 320, windowHeight-100);
